@@ -37,12 +37,26 @@ kernel.bin: entry.o kernel.o
 	      entry.o kernel.o \
 	      -o $@
 
+
+
 janitor.img: boot.bin kernel.bin
 	cat boot.bin kernel.bin > $@
 	truncate -s 1474560 $@
 
+QEMU := qemu-system-i386
+
 run: janitor.img
-	qemu-system-i386 -drive format=raw,if=floppy,file=$<
+	@command -v $(QEMU) >/dev/null 2>&1 || { \
+		echo "Error: $(QEMU) is not installed."; \
+		echo ""; \
+		echo "Install QEMU and try again."; \
+		echo "Examples:"; \
+		echo "  Debian/Ubuntu: sudo apt install qemu-system-x86"; \
+		echo "  Fedora:        sudo dnf install qemu-system-x86"; \
+		echo "  Arch Linux:    sudo pacman -S qemu-desktop"; \
+		exit 1; \
+	}
+	$(QEMU) -drive format=raw,if=floppy,file=$<
 
 clean:
 	rm -f *.o *.bin janitor.img
