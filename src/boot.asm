@@ -18,7 +18,7 @@ start:
 
     mov [boot_drive], dl
 
-    ; Load kernel
+    ; load kernel
     mov ax, KERNEL_SEG
     mov es, ax
     xor bx, bx
@@ -40,7 +40,7 @@ disk_error:
     mov si, error_msg
     call print
 
-    ; Print actual AH from BIOS
+    ; print AH from BIOS
     mov al, ah
     call print_hex
 
