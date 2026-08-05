@@ -1,4 +1,4 @@
-#define MAX_INPUT 80
+#define MAX_INPUT 80 // sup
 
 void putc(char c)
 {
