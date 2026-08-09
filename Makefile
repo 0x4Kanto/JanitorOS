@@ -1,51 +1,27 @@
-CC=gcc
-LD=ld
-ASM=nasm
-
-SRC=src
-
-CFLAGS=-m16 \
-       -ffreestanding \
-       -fno-pie \
-       -fno-pic \
-       -fno-stack-protector \
-       -fno-asynchronous-unwind-tables \
-       -c
-
-all: janitor.img
-
-boot.bin: $(SRC)/boot.asm
-	$(ASM) -f bin $< -o $@
-
-entry.o: $(SRC)/entry.asm
-	$(ASM) -f elf32 $< -o $@
-
-kernel.o: $(SRC)/kernel.c
-	$(CC) -m16 -ffreestanding \
-	      -fno-pie \
-	      -fno-pic \
-	      -fno-stack-protector \
-	      -fno-asynchronous-unwind-tables \
-	      -fno-unwind-tables \
-	      -O0 -g \
-	      -c $< -o $@
-
-kernel.bin: entry.o kernel.o
-	$(LD) -m elf_i386 \
-	      -T $(SRC)/linker.ld \
-	      --oformat binary \
-	      entry.o kernel.o \
-	      -o $@
-
-
-
-janitor.img: boot.bin kernel.bin
-	cat boot.bin kernel.bin > $@
-	truncate -s 1474560 $@
-
+ASM := nasm
 QEMU := qemu-system-i386
 
-run: janitor.img
+SRC := src
+
+BOOT := boot.bin
+KERNEL := kernel.bin
+IMAGE := janitor.img
+
+.PHONY: all run clean
+
+all: $(IMAGE)
+
+$(BOOT): $(SRC)/boot.asm
+	$(ASM) -f bin $< -o $@
+
+$(KERNEL): $(SRC)/kernel.asm
+	$(ASM) -f bin $< -o $@
+
+$(IMAGE): $(BOOT) $(KERNEL)
+	cat $(BOOT) $(KERNEL) > $@
+	truncate -s 1474560 $@
+
+run: $(IMAGE)
 	@command -v $(QEMU) >/dev/null 2>&1 || { \
 		echo "Error: $(QEMU) is not installed."; \
 		echo ""; \
@@ -56,7 +32,7 @@ run: janitor.img
 		echo "  Arch Linux:    sudo pacman -S qemu-desktop"; \
 		exit 1; \
 	}
-	$(QEMU) -drive format=raw,if=floppy,file=$<
+	$(QEMU) -drive format=raw,if=floppy,file=$(IMAGE)
 
 clean:
-	rm -f *.o *.bin janitor.img
+	rm -f $(BOOT) $(KERNEL) $(IMAGE)
