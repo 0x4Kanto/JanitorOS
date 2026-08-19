@@ -303,198 +303,6 @@ starts_with:
     ret
 
 
-graphics_rect:
-    push ax
-    push bx
-    push cx
-    push dx
-    push si
-    push di
-    push bp
-
-    mov si, ax
-    mov bp, bx
-    mov di, cx
-
-    cmp si, 320
-    jae .done
-
-    cmp bp, 200
-    jae .done
-
-    mov ax, 320
-    sub ax, si
-
-    cmp di, ax
-    jbe .width_ok
-
-    mov di, ax
-
-.width_ok:
-
-    mov ax, 200
-    sub ax, bp
-
-    cmp dx, ax
-    jbe .height_ok
-
-    mov dx, ax
-
-.height_ok:
-
-    cmp di, 0
-    je .done
-
-    cmp dx, 0
-    je .done
-
-
-.row:
-    push dx
-    mov cx, si
-    mov dx, bp
-    mov ax, di
-
-.pixel:
-    push ax
-
-    mov ah, 0x0C
-    mov al, 0x04
-    mov bh, 0x00
-
-    int 0x10
-
-    pop ax
-
-    inc cx
-    dec ax
-
-    jnz .pixel
-
-    inc bp
-
-    pop dx
-    dec dx
-
-    jnz .row
-
-.done:
-    pop bp
-    pop di
-    pop si
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
-
-
-graphics_command:
-    add si, 4
-
-.skip_x_spaces:
-    cmp byte [si], ' '
-    jne .parse_x
-
-    inc si
-    jmp .skip_x_spaces
-
-.parse_x:
-    call parse_uint
-    jc .usage
-
-    mov [rect_x], ax
-
-.skip_y_spaces:
-    cmp byte [si], ' '
-    jne .parse_y
-
-    inc si
-    jmp .skip_y_spaces
-
-.parse_y:
-    call parse_uint
-    jc .usage
-
-    mov [rect_y], ax
-
-.skip_w_spaces:
-    cmp byte [si], ' '
-    jne .parse_w
-
-    inc si
-    jmp .skip_w_spaces
-
-.parse_w:
-    call parse_uint
-    jc .usage
-
-    mov [rect_w], ax
-
-.skip_h_spaces:
-    cmp byte [si], ' '
-    jne .parse_h
-
-    inc si
-    jmp .skip_h_spaces
-
-.parse_h:
-    call parse_uint
-    jc .usage
-
-    mov [rect_h], ax
-
-.check_end:
-    cmp byte [si], 0
-    je .draw
-
-    cmp byte [si], ' '
-    jne .usage
-
-    inc si
-    jmp .check_end
-
-.draw:
-
-    cmp word [rect_w], 0
-    je .usage
-
-    cmp word [rect_h], 0
-    je .usage
-
-    cmp word [rect_x], 800
-    jae .usage
-
-    cmp word [rect_y], 800
-    jae .usage
-
-    mov ax, 0x000D
-    int 0x10
-
-    mov ax, [rect_x]
-    mov bx, [rect_y]
-    mov cx, [rect_w]
-    mov dx, [rect_h]
-
-    call graphics_rect
-
-    call getch
-
-    mov ax, 0x0003
-    int 0x10
-
-    mov si, msg_graphics_return
-    call puts
-
-    ret
-
-
-.usage:
-    mov si, msg_rect_usage
-    call puts
-    ret
-
-
 shell:
     mov si, msg_banner
     call puts
@@ -582,12 +390,6 @@ shell:
     jc .math
 
     mov si, input
-    mov di, cmd_rect
-    call starts_with
-
-    jc .rect
-
-    mov si, input
     mov di, cmd_reboot
     call starts_with
 
@@ -655,6 +457,12 @@ shell:
     cmp byte [si], '-'
     je .operator_found
 
+    cmp byte [si], '*'
+    je .operator_found
+
+    cmp byte [si], '/'
+    je .operator_found
+
     cmp byte [si], ' '
     je .skip_operator_space
 
@@ -709,6 +517,12 @@ shell:
     cmp byte [math_op], '-'
     je .subtract
 
+    cmp byte [math_op], '*'
+    je .multiply
+
+    cmp byte [math_op], '/'
+    je .divide
+
     jmp .math_usage
 
 
@@ -719,6 +533,20 @@ shell:
 
 .subtract:
     sub ax, bx
+    jmp .print_result
+
+
+.multiply:
+    imul bx
+    jmp .print_result
+
+
+.divide:
+    cmp bx, 0
+    je .math_usage
+
+    cwd
+    idiv bx
 
 
 .print_result:
@@ -733,12 +561,6 @@ shell:
 .math_usage:
     mov si, msg_math_usage
     call puts
-
-    jmp .main_loop
-
-
-.rect:
-    call graphics_command
 
     jmp .main_loop
 
@@ -772,8 +594,7 @@ msg_commands:
     db 'Commands:', 13, 10
     db '  help', 13, 10
     db '  echo <text>', 13, 10
-    db '  math <a> +|- <b>', 13, 10
-    db '  rect <x> <y> <width> <height>', 13, 10
+    db '  math <a> +|-|*|/ <b>', 13, 10
     db '  reboot', 13, 10
     db 0
 
@@ -788,20 +609,7 @@ msg_unknown:
 
 
 msg_math_usage:
-    db 'Usage: math <a> +|- <b>', 13, 10
-    db 0
-
-
-msg_rect_usage:
-    db 'Usage: rect <x> <y> <width> <height>', 13, 10
-    db 'Video mode: 320x200, 16 colors', 13, 10
-    db 'Example: rect 50 40 120 70', 13, 10
-    db 0
-
-
-msg_graphics_return:
-    db 13, 10
-    db 'Returned to shell.', 13, 10
+    db 'Usage: math <a> +|-|*|/ <b>', 13, 10
     db 0
 
 
@@ -825,10 +633,6 @@ cmd_math:
     db 'math', 0
 
 
-cmd_rect:
-    db 'rect', 0
-
-
 cmd_reboot:
     db 'reboot', 0
 
@@ -847,22 +651,6 @@ math_b:
 
 math_op:
     db 0
-
-
-rect_x:
-    dw 0
-
-
-rect_y:
-    dw 0
-
-
-rect_w:
-    dw 0
-
-
-rect_h:
-    dw 0
 
 
 times ((512 - ($ - $$) % 512) % 512) db 0
