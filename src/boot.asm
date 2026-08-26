@@ -17,17 +17,16 @@ start:
     sti
 
     mov [boot_drive], dl
-
-    ; load kernel
+    
     mov ax, KERNEL_SEG
     mov es, ax
     xor bx, bx
 
-    mov ah, 0x02        ; read sectors
-    mov al, 16          ; sectors to read
-    mov ch, 0           ; cylinder
-    mov cl, 2           ; start sector
-    mov dh, 0           ; head
+    mov ah, 0x02     
+    mov al, 16
+    mov ch, 0      
+    mov cl, 2        
+    mov dh, 0
     mov dl, [boot_drive]
 
     int 0x13
