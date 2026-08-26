@@ -1,11 +1,10 @@
 # Docs
 
+# Notes
+- No, i will *NOT* add any comments to my code!!
+
 # Install:
 - make && make run
 
 # Uninstall
 - make clean
-
-
-# Notes
-- Added shell, changed entry stack to 0xFFFE
