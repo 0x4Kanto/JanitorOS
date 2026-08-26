@@ -12,7 +12,7 @@ start:
 
     xor ax, ax
     mov ss, ax
-    mov sp, 0x7C00
+    mov sp, 0x7A00
 
     sti
 
@@ -37,15 +37,19 @@ start:
 
 
 disk_error:
+    mov [disk_error_code], ah
+
     mov si, error_msg
     call print
 
-    ; print AH from BIOS
-    mov al, ah
+    mov al, [disk_error_code]
     call print_hex
 
     cli
     hlt
+
+disk_error_code db 0
+
 
 
 print:
@@ -54,6 +58,7 @@ print:
     jz .done
 
     mov ah, 0x0E
+    mov bh, 0
     int 0x10
 
     jmp print
@@ -87,12 +92,13 @@ hex_digit:
 
 .out:
     mov ah, 0x0E
+    mov bh, 0
     int 0x10
     ret
 
 
 boot_drive db 0
-error_msg db "Disk error AH=",0
+error_msg db "Disk error AH=", 0
 
 
 times 510-($-$$) db 0
